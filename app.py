@@ -96,7 +96,7 @@ st.markdown(
 )
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=config.CACHE_REFRESH_INTERVAL)
 def sync_data():
     """同步链上数据 (带缓存)"""
     return ensure_data_sync(verbose=False)

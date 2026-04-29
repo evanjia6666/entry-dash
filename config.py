@@ -1,12 +1,13 @@
 """
 项目配置文件 - 合约地址、RPC、ABI 等配置
 """
+import os
 
 # BSC 合约地址
 CONTRACT_ADDRESS = "0x743CB7d6D8fBBF93806DeC9B7700743a2641dae2"
 
-# BSC RPC 节点 (可替换为其他节点如 Ankr, QuickNode 等)
-BSC_RPC_URL = "https://bsc-dataseed.binance.org"
+# BSC RPC 节点 (可通过环境变量覆盖)
+BSC_RPC_URL = os.getenv("BSC_RPC_URL", "https://bsc-dataseed.binance.org")
 
 # BSC Chain ID
 BSC_CHAIN_ID = 56
@@ -100,6 +101,7 @@ CONTRACT_ABI = [
 # 缓存配置
 CACHE_DIR = ".cache"
 CACHE_DB_PATH = f"{CACHE_DIR}/events.db"
+CACHE_REFRESH_INTERVAL = int(os.getenv("CACHE_REFRESH_INTERVAL", "3600"))
 
 # 图表默认时间范围 (天)
 DEFAULT_DAYS = 30

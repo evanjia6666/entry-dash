@@ -1,5 +1,6 @@
 .env
 .cache/
+cache-data/
 __pycache__/
 *.pyc
 *.pyo
