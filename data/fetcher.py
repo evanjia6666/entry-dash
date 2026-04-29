@@ -95,9 +95,9 @@ def fetch_events_from_chain(
             print(f"  处理区块 {current_block} - {end_block}...")
 
         # WalletCreated
-        events = contract.events.WalletCreated().get_logs(
-            fromBlock=current_block, toBlock=end_block
-        )
+        events = contract.events.WalletCreated().create_filter(
+            from_block=current_block, to_block=end_block
+        ).get_all_entries()
         for event in events:
             ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
             insert_wallet_created(conn, {
@@ -111,9 +111,9 @@ def fetch_events_from_chain(
             stats["wallet_created"] += 1
 
         # TransactionExecuted
-        events = contract.events.TransactionExecuted().get_logs(
-            fromBlock=current_block, toBlock=end_block
-        )
+        events = contract.events.TransactionExecuted().create_filter(
+            from_block=current_block, to_block=end_block
+        ).get_all_entries()
         for event in events:
             ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
             insert_transaction_executed(conn, {
@@ -128,9 +128,9 @@ def fetch_events_from_chain(
             stats["transaction_executed"] += 1
 
         # Executed (所有者执行)
-        events = contract.events.Executed().get_logs(
-            fromBlock=current_block, toBlock=end_block
-        )
+        events = contract.events.Executed().create_filter(
+            from_block=current_block, to_block=end_block
+        ).get_all_entries()
         for event in events:
             ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
             insert_executed(conn, {
@@ -145,9 +145,9 @@ def fetch_events_from_chain(
             stats["executed"] += 1
 
         # ExecutedByAdmin
-        events = contract.events.ExecutedByAdmin().get_logs(
-            fromBlock=current_block, toBlock=end_block
-        )
+        events = contract.events.ExecutedByAdmin().create_filter(
+            from_block=current_block, to_block=end_block
+        ).get_all_entries()
         for event in events:
             ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
             insert_executed(conn, {
@@ -162,9 +162,9 @@ def fetch_events_from_chain(
             stats["executed"] += 1
 
         # ExecutedByEntry
-        events = contract.events.ExecutedByEntry().get_logs(
-            fromBlock=current_block, toBlock=end_block
-        )
+        events = contract.events.ExecutedByEntry().create_filter(
+            from_block=current_block, to_block=end_block
+        ).get_all_entries()
         for event in events:
             ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
             insert_executed(conn, {
@@ -179,9 +179,9 @@ def fetch_events_from_chain(
             stats["executed"] += 1
 
         # EthTransfered
-        events = contract.events.EthTransfered().get_logs(
-            fromBlock=current_block, toBlock=end_block
-        )
+        events = contract.events.EthTransfered().create_filter(
+            from_block=current_block, to_block=end_block
+        ).get_all_entries()
         for event in events:
             ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
             insert_eth_transferred(conn, {
@@ -194,9 +194,9 @@ def fetch_events_from_chain(
             stats["eth_transferred"] += 1
 
         # GasReceived
-        events = contract.events.GasReceived().get_logs(
-            fromBlock=current_block, toBlock=end_block
-        )
+        events = contract.events.GasReceived().create_filter(
+            from_block=current_block, to_block=end_block
+        ).get_all_entries()
         for event in events:
             ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
             insert_gas_received(conn, {
