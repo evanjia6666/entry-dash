@@ -47,7 +47,7 @@ def init_db(db_path: Optional[str] = None) -> sqlite3.Connection:
             block_number INTEGER,
             timestamp TEXT,
             target TEXT,
-            values TEXT,  -- JSON array
+            values_data TEXT,  -- JSON array
             data TEXT,    -- JSON array
             executor_type TEXT,
             PRIMARY KEY (tx_hash, target)
@@ -152,7 +152,7 @@ def insert_executed(conn: sqlite3.Connection, event: dict):
     """插入批量执行事件"""
     conn.execute(
         """INSERT OR IGNORE INTO executed 
-           (tx_hash, block_number, timestamp, target, values, data, executor_type)
+           (tx_hash, block_number, timestamp, target, values_data, data, executor_type)
            VALUES (?, ?, ?, ?, ?, ?, ?)""",
         (
             event["tx_hash"],
