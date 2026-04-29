@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from web3 import Web3
-from web3.contract.contract import ContractEvents
 
 import config
 from data.cache import (
@@ -36,10 +35,18 @@ def get_contract(w3: Web3):
     )
 
 
+_block_timestamp_cache = {}
+
+
 def get_block_timestamp(w3: Web3, block_number: int) -> datetime:
-    """获取区块时间戳"""
+    """获取区块时间戳（带缓存）"""
+    if block_number in _block_timestamp_cache:
+        return _block_timestamp_cache[block_number]
+    
     block = w3.eth.get_block(block_number)
-    return datetime.fromtimestamp(block.timestamp, tz=timezone.utc)
+    ts = datetime.fromtimestamp(block.timestamp, tz=timezone.utc)
+    _block_timestamp_cache[block_number] = ts
+    return ts
 
 
 def fetch_events_from_chain(
@@ -58,6 +65,9 @@ def fetch_events_from_chain(
 
     contract = get_contract(w3)
     conn = init_db()
+    
+    # 清空区块时间戳缓存
+    _block_timestamp_cache.clear()
 
     # 获取最新区块
     latest_block = w3.eth.block_number
@@ -84,8 +94,8 @@ def fetch_events_from_chain(
         "gas_received": 0,
     }
 
-    # 批量获取事件 (每次 10000 个区块)
-    batch_size = 10000
+    # BSC 公共节点限制：每次最多查询 2000 个区块
+    batch_size = 2000
     current_block = actual_from_block
 
     while current_block <= to_block:
@@ -95,127 +105,155 @@ def fetch_events_from_chain(
             print(f"  处理区块 {current_block} - {end_block}...")
 
         # WalletCreated
-        events = contract.events.WalletCreated().create_filter(
-            from_block=current_block, to_block=end_block
-        ).get_all_entries()
-        for event in events:
-            ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
-            insert_wallet_created(conn, {
-                "tx_hash": event["transactionHash"].hex(),
-                "block_number": event["blockNumber"],
-                "timestamp": ts,
-                "owner": event["args"]["owner"],
-                "scw": event["args"]["scw"],
-                "admin": event["args"]["admin"],
-            })
-            stats["wallet_created"] += 1
+        try:
+            logs = contract.events.WalletCreated().get_logs(
+                from_block=current_block, to_block=end_block
+            )
+            for log in logs:
+                ts = get_block_timestamp(w3, log['blockNumber'])
+                insert_wallet_created(conn, {
+                    "tx_hash": log['transactionHash'].hex(),
+                    "block_number": log['blockNumber'],
+                    "timestamp": ts,
+                    "owner": log['args']['owner'],
+                    "scw": log['args']['scw'],
+                    "admin": log['args']['admin'],
+                })
+                stats["wallet_created"] += 1
+        except Exception as e:
+            if verbose:
+                print(f"    WalletCreated 查询失败: {e}")
 
         # TransactionExecuted
-        events = contract.events.TransactionExecuted().create_filter(
-            from_block=current_block, to_block=end_block
-        ).get_all_entries()
-        for event in events:
-            ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
-            insert_transaction_executed(conn, {
-                "tx_hash": event["transactionHash"].hex(),
-                "block_number": event["blockNumber"],
-                "timestamp": ts,
-                "owner": event["args"]["owner"],
-                "scw": event["args"]["scw"],
-                "admin": event["args"]["admin"],
-                "created": event["args"]["created"],
-            })
-            stats["transaction_executed"] += 1
+        try:
+            logs = contract.events.TransactionExecuted().get_logs(
+                from_block=current_block, to_block=end_block
+            )
+            for log in logs:
+                ts = get_block_timestamp(w3, log['blockNumber'])
+                insert_transaction_executed(conn, {
+                    "tx_hash": log['transactionHash'].hex(),
+                    "block_number": log['blockNumber'],
+                    "timestamp": ts,
+                    "owner": log['args']['owner'],
+                    "scw": log['args']['scw'],
+                    "admin": log['args']['admin'],
+                    "created": log['args']['created'],
+                })
+                stats["transaction_executed"] += 1
+        except Exception as e:
+            if verbose:
+                print(f"    TransactionExecuted 查询失败: {e}")
 
         # Executed (所有者执行)
-        events = contract.events.Executed().create_filter(
-            from_block=current_block, to_block=end_block
-        ).get_all_entries()
-        for event in events:
-            ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
-            insert_executed(conn, {
-                "tx_hash": event["transactionHash"].hex(),
-                "block_number": event["blockNumber"],
-                "timestamp": ts,
-                "target": event["args"]["target"],
-                "values": event["args"]["value"],
-                "data": event["args"]["data"],
-                "executor_type": "owner",
-            })
-            stats["executed"] += 1
+        try:
+            logs = contract.events.Executed().get_logs(
+                from_block=current_block, to_block=end_block
+            )
+            for log in logs:
+                ts = get_block_timestamp(w3, log['blockNumber'])
+                insert_executed(conn, {
+                    "tx_hash": log['transactionHash'].hex(),
+                    "block_number": log['blockNumber'],
+                    "timestamp": ts,
+                    "target": log['args']['target'],
+                    "values": log['args']['value'],
+                    "data": log['args']['data'],
+                    "executor_type": "owner",
+                })
+                stats["executed"] += 1
+        except Exception as e:
+            if verbose:
+                print(f"    Executed 查询失败: {e}")
 
         # ExecutedByAdmin
-        events = contract.events.ExecutedByAdmin().create_filter(
-            from_block=current_block, to_block=end_block
-        ).get_all_entries()
-        for event in events:
-            ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
-            insert_executed(conn, {
-                "tx_hash": event["transactionHash"].hex(),
-                "block_number": event["blockNumber"],
-                "timestamp": ts,
-                "target": event["args"]["target"],
-                "values": event["args"]["value"],
-                "data": event["args"]["data"],
-                "executor_type": "admin",
-            })
-            stats["executed"] += 1
+        try:
+            logs = contract.events.ExecutedByAdmin().get_logs(
+                from_block=current_block, to_block=end_block
+            )
+            for log in logs:
+                ts = get_block_timestamp(w3, log['blockNumber'])
+                insert_executed(conn, {
+                    "tx_hash": log['transactionHash'].hex(),
+                    "block_number": log['blockNumber'],
+                    "timestamp": ts,
+                    "target": log['args']['target'],
+                    "values": log['args']['value'],
+                    "data": log['args']['data'],
+                    "executor_type": "admin",
+                })
+                stats["executed"] += 1
+        except Exception as e:
+            if verbose:
+                print(f"    ExecutedByAdmin 查询失败: {e}")
 
         # ExecutedByEntry
-        events = contract.events.ExecutedByEntry().create_filter(
-            from_block=current_block, to_block=end_block
-        ).get_all_entries()
-        for event in events:
-            ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
-            insert_executed(conn, {
-                "tx_hash": event["transactionHash"].hex(),
-                "block_number": event["blockNumber"],
-                "timestamp": ts,
-                "target": event["args"]["target"],
-                "values": event["args"]["value"],
-                "data": event["args"]["data"],
-                "executor_type": "entry",
-            })
-            stats["executed"] += 1
+        try:
+            logs = contract.events.ExecutedByEntry().get_logs(
+                from_block=current_block, to_block=end_block
+            )
+            for log in logs:
+                ts = get_block_timestamp(w3, log['blockNumber'])
+                insert_executed(conn, {
+                    "tx_hash": log['transactionHash'].hex(),
+                    "block_number": log['blockNumber'],
+                    "timestamp": ts,
+                    "target": log['args']['target'],
+                    "values": log['args']['value'],
+                    "data": log['args']['data'],
+                    "executor_type": "entry",
+                })
+                stats["executed"] += 1
+        except Exception as e:
+            if verbose:
+                print(f"    ExecutedByEntry 查询失败: {e}")
 
         # EthTransfered
-        events = contract.events.EthTransfered().create_filter(
-            from_block=current_block, to_block=end_block
-        ).get_all_entries()
-        for event in events:
-            ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
-            insert_eth_transferred(conn, {
-                "tx_hash": event["transactionHash"].hex(),
-                "block_number": event["blockNumber"],
-                "timestamp": ts,
-                "target": event["args"]["target"],
-                "value": event["args"]["value"],
-            })
-            stats["eth_transferred"] += 1
+        try:
+            logs = contract.events.EthTransfered().get_logs(
+                from_block=current_block, to_block=end_block
+            )
+            for log in logs:
+                ts = get_block_timestamp(w3, log['blockNumber'])
+                insert_eth_transferred(conn, {
+                    "tx_hash": log['transactionHash'].hex(),
+                    "block_number": log['blockNumber'],
+                    "timestamp": ts,
+                    "target": log['args']['target'],
+                    "value": log['args']['value'],
+                })
+                stats["eth_transferred"] += 1
+        except Exception as e:
+            if verbose:
+                print(f"    EthTransfered 查询失败: {e}")
 
         # GasReceived
-        events = contract.events.GasReceived().create_filter(
-            from_block=current_block, to_block=end_block
-        ).get_all_entries()
-        for event in events:
-            ts = datetime.fromtimestamp(event["blockData"]["timestamp"], tz=timezone.utc)
-            insert_gas_received(conn, {
-                "tx_hash": event["transactionHash"].hex(),
-                "block_number": event["blockNumber"],
-                "timestamp": ts,
-                "from_addr": event["args"]["from"],
-                "to_addr": event["args"]["to"],
-                "token": event["args"]["token"],
-                "amount": event["args"]["amount"],
-            })
-            stats["gas_received"] += 1
+        try:
+            logs = contract.events.GasReceived().get_logs(
+                from_block=current_block, to_block=end_block
+            )
+            for log in logs:
+                ts = get_block_timestamp(w3, log['blockNumber'])
+                insert_gas_received(conn, {
+                    "tx_hash": log['transactionHash'].hex(),
+                    "block_number": log['blockNumber'],
+                    "timestamp": ts,
+                    "from_addr": log['args']['from'],
+                    "to_addr": log['args']['to'],
+                    "token": log['args']['token'],
+                    "amount": log['args']['amount'],
+                })
+                stats["gas_received"] += 1
+        except Exception as e:
+            if verbose:
+                print(f"    GasReceived 查询失败: {e}")
 
         commit(conn)
         update_sync_metadata(conn, end_block)
         current_block = end_block + 1
 
         # 避免 RPC 请求过快被限流
-        time.sleep(0.1)
+        time.sleep(0.2)
 
     conn.close()
 

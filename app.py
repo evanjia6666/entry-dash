@@ -156,14 +156,14 @@ def render_user_growth_page(days: int):
     with col1:
         daily_new = calc_daily_new_wallets(conn, days)
         if not daily_new.empty:
-            st.plotly_chart(create_daily_new_wallets_chart(daily_new), use_container_width=True)
+            st.plotly_chart(create_daily_new_wallets_chart(daily_new), width='stretch')
         else:
             st.info("暂无数据")
 
     with col2:
         cumulative = calc_cumulative_wallets(conn, days)
         if not cumulative.empty:
-            st.plotly_chart(create_cumulative_wallets_chart(cumulative), use_container_width=True)
+            st.plotly_chart(create_cumulative_wallets_chart(cumulative), width='stretch')
         else:
             st.info("暂无数据")
 
@@ -172,26 +172,26 @@ def render_user_growth_page(days: int):
     with col1:
         active = calc_active_wallets(conn, "daily", days)
         if not active.empty:
-            st.plotly_chart(create_active_wallets_chart(active), use_container_width=True)
+            st.plotly_chart(create_active_wallets_chart(active), width='stretch')
         else:
             st.info("暂无数据")
 
     with col2:
         new_vs_active = calc_new_vs_active(conn, days)
         if not new_vs_active.empty:
-            st.plotly_chart(create_new_vs_active_chart(new_vs_active), use_container_width=True)
+            st.plotly_chart(create_new_vs_active_chart(new_vs_active), width='stretch')
         else:
             st.info("暂无数据")
 
     # 留存率
     st.subheader("📋 用户留存率")
     retention = calc_retention_rate(conn, retention_days=7, max_days=days)
-    st.plotly_chart(create_retention_heatmap(retention), use_container_width=True)
+    st.plotly_chart(create_retention_heatmap(retention), width='stretch')
 
     # 首次交易分布
     st.subheader("⏱️ 首次交易时间分布")
     first_tx = calc_first_tx_time_distribution(conn)
-    st.plotly_chart(create_first_tx_distribution(first_tx), use_container_width=True)
+    st.plotly_chart(create_first_tx_distribution(first_tx), width='stretch')
 
     conn.close()
 
@@ -207,14 +207,14 @@ def render_volume_analysis_page(days: int):
     with col1:
         daily_tx = calc_daily_tx_count(conn, days)
         if not daily_tx.empty:
-            st.plotly_chart(create_daily_tx_count_chart(daily_tx), use_container_width=True)
+            st.plotly_chart(create_daily_tx_count_chart(daily_tx), width='stretch')
         else:
             st.info("暂无数据")
 
     with col2:
         daily_vol = calc_daily_volume(conn, days)
         if not daily_vol.empty:
-            st.plotly_chart(create_daily_volume_chart(daily_vol), use_container_width=True)
+            st.plotly_chart(create_daily_volume_chart(daily_vol), width='stretch')
         else:
             st.info("暂无数据")
 
@@ -223,21 +223,21 @@ def render_volume_analysis_page(days: int):
     with col1:
         avg_amount = calc_avg_tx_amount(conn, days)
         if not avg_amount.empty:
-            st.plotly_chart(create_avg_tx_amount_chart(avg_amount), use_container_width=True)
+            st.plotly_chart(create_avg_tx_amount_chart(avg_amount), width='stretch')
         else:
             st.info("暂无数据")
 
     with col2:
         gas_cost = calc_daily_gas_cost(conn, days)
         if not gas_cost.empty:
-            st.plotly_chart(create_daily_gas_cost_chart(gas_cost), use_container_width=True)
+            st.plotly_chart(create_daily_gas_cost_chart(gas_cost), width='stretch')
         else:
             st.info("暂无数据")
 
     # Top 代币转账
     st.subheader("🏷️ Top 20 代币转账排行")
     top_tokens = get_top_token_transfers(conn)
-    st.plotly_chart(create_token_transfer_ranking(top_tokens), use_container_width=True)
+    st.plotly_chart(create_token_transfer_ranking(top_tokens), width='stretch')
 
     conn.close()
 
@@ -252,21 +252,21 @@ def render_behavior_analysis_page(days: int):
 
     with col1:
         freq_dist = calc_tx_frequency_distribution(conn)
-        st.plotly_chart(create_tx_frequency_chart(freq_dist), use_container_width=True)
+        st.plotly_chart(create_tx_frequency_chart(freq_dist), width='stretch')
 
     with col2:
         avg_tx = calc_avg_tx_per_user(conn, days)
-        st.plotly_chart(create_avg_tx_per_user_chart(avg_tx), use_container_width=True)
+        st.plotly_chart(create_avg_tx_per_user_chart(avg_tx), width='stretch')
 
     col1, col2 = st.columns(2)
 
     with col1:
         executor_dist = calc_executor_type_distribution(conn)
-        st.plotly_chart(create_executor_pie_chart(executor_dist), use_container_width=True)
+        st.plotly_chart(create_executor_pie_chart(executor_dist), width='stretch')
 
     with col2:
         hourly_dist = calc_hourly_distribution(conn)
-        st.plotly_chart(create_hourly_heatmap(hourly_dist), use_container_width=True)
+        st.plotly_chart(create_hourly_heatmap(hourly_dist), width='stretch')
 
     # 排行
     st.subheader("🏆 排行榜")
@@ -276,17 +276,17 @@ def render_behavior_analysis_page(days: int):
     with col1:
         st.markdown("**Top 10 活跃钱包**")
         top_active = calc_top_active_wallets(conn)
-        st.plotly_chart(create_top_active_wallets_chart(top_active), use_container_width=True)
+        st.plotly_chart(create_top_active_wallets_chart(top_active), width='stretch')
 
     with col2:
         st.markdown("**Top 10 交易量钱包**")
         top_volume = calc_top_volume_wallets(conn)
-        st.plotly_chart(create_top_volume_wallets_chart(top_volume), use_container_width=True)
+        st.plotly_chart(create_top_volume_wallets_chart(top_volume), width='stretch')
 
     with col3:
         st.markdown("**Top 目标合约交互**")
         top_targets = calc_top_target_contracts(conn)
-        st.plotly_chart(create_target_contracts_chart(top_targets), use_container_width=True)
+        st.plotly_chart(create_target_contracts_chart(top_targets), width='stretch')
 
     conn.close()
 
@@ -304,7 +304,7 @@ def render_platform_health_page():
     executor_dist = calc_executor_type_distribution(conn)
     from charts.behavior_charts import create_executor_pie_chart
 
-    st.plotly_chart(create_executor_pie_chart(executor_dist), use_container_width=True)
+    st.plotly_chart(create_executor_pie_chart(executor_dist), width='stretch')
 
     # 配置变更历史 (需要从链上获取更多事件)
     st.subheader("📋 配置变更日志")
@@ -321,7 +321,7 @@ def render_platform_health_page():
         [{"指标": k, "数值": format_number(v) if isinstance(v, (int, float)) else v}
          for k, v in summary.items() if k != "latest_data_time"]
     )
-    st.dataframe(summary_df, use_container_width=True, hide_index=True)
+    st.dataframe(summary_df, width='stretch', hide_index=True)
 
     conn.close()
 
